@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "task_id": "task_protect",
+      "total_reward": 1.314,
+      "steps": 5
+    },
+    {
+      "task_id": "task_detect",
+      "total_reward": 2.2324,
+      "steps": 8
+    },
+    {
+      "task_id": "task_respond",
+      "total_reward": 3.494,
+      "steps": 8
+    }
+  ],
+  "avg_reward": 2.3468
+}
