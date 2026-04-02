@@ -16,6 +16,13 @@ try:
 except:
     USE_REAL = False
 
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    index = Path(__file__).parent.parent / "frontend" / "index.html"
+    if index.exists():
+        return HTMLResponse(index.read_text(encoding="utf-8"))
+    return HTMLResponse("<h1>DualShield Running</h1><a href='/docs'>API Docs</a>")
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "name": "DualShield", "version": "1.0.0", "tests": "44/44", "avg_reward": 2.35}
