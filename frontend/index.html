@@ -1260,24 +1260,70 @@ function anim(barId, pctId, target) {
   const iv = setInterval(()=>{ c=Math.min(c+step,target); p.textContent=Math.round(c)+'%'; if(c>=target)clearInterval(iv); },25);
 }
 
-// DETECT
-function runDetect(type) {
-  const cfg = {
-    face_swap: { score:23, label:'⚠️ Manipulation Detected — Face Swap', fs:89, bg:12, md:5, cg:20, icon:'⚠️', vtxt:'Face Swap Detected', vsub:'High confidence deepfake. Generate proof immediately.', manip:true },
-    bg_edit: { score:58, label:'⚠️ Possible Manipulation — Background Edit', fs:8, bg:78, md:18, cg:40, icon:'⚠️', vtxt:'Background Edit Found', vsub:'Background appears significantly altered.', manip:true },
-    composite: { score:31, label:'⚠️ Manipulation Detected — Composite', fs:45, bg:55, md:20, cg:60, icon:'⚠️', vtxt:'Composite Image Detected', vsub:'Multiple source images merged.', manip:true },
-    original: { score:96, label:'✅ Image Appears Original', fs:3, bg:4, md:7, cg:5, icon:'✅', vtxt:'No Manipulation Detected', vsub:'Image analysis shows no signs of editing.', manip:false }
-  };
-  const c = cfg[type];
+// DETECT — Real API Connection
+async function runDetect(type) {
   document.getElementById('detRes').style.display='block';
   const sc = document.getElementById('authScore');
-  sc.textContent = c.score+'%';
-  sc.style.color = c.manip ? 'var(--red)' : 'var(--teal)';
-  document.getElementById('authLabel').textContent = c.label;
-  anim('fsb','fsp',c.fs); anim('bgb','bgp',c.bg); anim('mdb','mdp',c.md); anim('cgb','cgp',c.cg);
-  document.getElementById('vicon').textContent = c.icon;
-  document.getElementById('vtxt').textContent = c.vtxt;
-  document.getElementById('vsub').textContent = c.vsub;
+  sc.textContent = '...';
+  sc.style.color = 'var(--muted)';
+  document.getElementById('authLabel').textContent = '⏳ Calling DualShieldNet AI...';
+  document.getElementById('vicon').textContent = '⏳';
+  document.getElementById('vtxt').textContent = 'Analyzing...';
+  document.getElementById('vsub').textContent = 'Connecting to backend API';
+
+  // Visual configs for bar charts
+  const cfg = {
+    face_swap: {fs:89,bg:12,md:5,cg:20},
+    bg_edit:   {fs:8,bg:78,md:18,cg:40},
+    composite: {fs:45,bg:55,md:20,cg:60},
+    original:  {fs:3,bg:4,md:7,cg:5}
+  };
+  const bars = cfg[type] || cfg['original'];
+
+  try {
+    // REAL API CALL to HF Space
+    const res = await fetch('https://birajdarsanika717-dualshield-env.hf.space/detect', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({type: type})
+    });
+    const data = await res.json();
+
+    const isManip = type !== 'original';
+    const score = Math.round(data.confidence * 100);
+    sc.textContent = score + '%';
+    sc.style.color = isManip ? 'var(--red)' : 'var(--teal)';
+    document.getElementById('authLabel').textContent = isManip
+      ? `⚠️ Manipulation Detected — ${type.replace('_',' ')}`
+      : '✅ Image Appears Original';
+
+    anim('fsb','fsp',bars.fs); anim('bgb','bgp',bars.bg);
+    anim('mdb','mdp',bars.md); anim('cgb','cgp',bars.cg);
+
+    document.getElementById('vicon').textContent = isManip ? '⚠️' : '✅';
+    document.getElementById('vtxt').textContent = isManip ? 'Manipulation Detected' : 'No Manipulation Found';
+    document.getElementById('vsub').textContent = `Model: ${data.model} | Confidence: ${score}% | Via Live API ✅`;
+    showToast(`✅ Real API: ${data.model} responded!`);
+
+  } catch(err) {
+    // Fallback if API unavailable
+    const fallback = {
+      face_swap: {score:23,manip:true,vtxt:'Face Swap Detected',vsub:'Deepfake detected (offline mode)'},
+      bg_edit:   {score:58,manip:true,vtxt:'Background Edit Found',vsub:'Background altered (offline mode)'},
+      composite: {score:31,manip:true,vtxt:'Composite Detected',vsub:'Multiple sources merged (offline mode)'},
+      original:  {score:96,manip:false,vtxt:'No Manipulation',vsub:'Image appears authentic (offline mode)'}
+    };
+    const f = fallback[type] || fallback['original'];
+    sc.textContent = f.score+'%';
+    sc.style.color = f.manip ? 'var(--red)' : 'var(--teal)';
+    document.getElementById('authLabel').textContent = f.manip ? '⚠️ Manipulation Detected' : '✅ Image Appears Original';
+    anim('fsb','fsp',bars.fs); anim('bgb','bgp',bars.bg);
+    anim('mdb','mdp',bars.md); anim('cgb','cgp',bars.cg);
+    document.getElementById('vicon').textContent = f.manip ? '⚠️' : '✅';
+    document.getElementById('vtxt').textContent = f.vtxt;
+    document.getElementById('vsub').textContent = f.vsub;
+    showToast('⚠️ Offline mode — API unavailable');
+  }
 }
 
 // SPREAD
